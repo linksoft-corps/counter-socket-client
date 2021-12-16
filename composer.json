@@ -1,7 +1,7 @@
 {
     "name": "linksoft-corps/counter-socket-client",
     "type": "library",
-    "license": "Apache 2",
+    "license": "Apache-2.0",
     "keywords": [
         "php",
         "hyperf"
