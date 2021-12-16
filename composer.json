@@ -1,0 +1,53 @@
+{
+    "name": "linksoft-corps/counter-socket-client",
+    "type": "library",
+    "license": "Apache 2",
+    "keywords": [
+        "php",
+        "hyperf"
+    ],
+    "description": "Multiplexing a single socket connection, asynchronous transmission into synchronous transmissiony",
+    "autoload": {
+        "psr-4": {
+            "LinksoftCorps\\CounterSocketClient\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "HyperfTest\\": "tests"
+        }
+    },
+    "require": {
+        "php": ">=7.3",
+        "ext-sockets": "*",
+        "hyperf/di": "2.2.*",
+        "hyperf/framework": "2.2.*",
+        "hyperf/http-server": "2.2.*",
+        "hyperf/logger": "^2.2",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "mockery/mockery": "^1.0",
+        "phpstan/phpstan": "^1.0",
+        "phpunit/phpunit": ">=7.0",
+        "swoole/ide-helper": "^4.5",
+        "swow/swow": "dev-develop"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "phpunit -c phpunit.xml --colors=always",
+        "analyse": "phpstan analyse --memory-limit 1024M -l 0 ./src",
+        "cs-fix": "php-cs-fixer fix $1"
+    },
+    "extra": {
+        "hyperf": {
+            "config": "LinksoftCorps\\CounterSocketClient\\ConfigProvider"
+        }
+    }
+}
