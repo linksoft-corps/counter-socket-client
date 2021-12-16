@@ -7,6 +7,12 @@
 
 #### 使用方法
 
+- 发布配置文件
+
+```shell
+php bin/hyperf.php vendor:publish linksoft/socket-client
+```
+
 - 在连接被建立时做一些初始化操作，包内定义了 LinkSocketInitSuccessEvent 事件，在连接被建立时会触发，调用者只需定义一个 listener，监听该事件，并做操作即可，连接异常断开重连也会触发该事件。
 
 ```php
