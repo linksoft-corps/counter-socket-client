@@ -123,7 +123,13 @@ class Client
     public function send(RequestMessage $message): ResponseMessage
     {
         $this->request[$message->getRequestId()] = $message;
-        $this->client->send($this->packer->pack($message));
+        // 要发送的数据，判断发送数据长度，以确保发送一定成功
+        $data = $this->packer->pack($message);
+        $size = strlen($data);
+        $res = $this->client->send($data);
+        if (!$res || $res != $size) {
+            throw new RequestException('data send fail.', Code::REQUEST_FAIL);
+        }
         // 等待数据接收者唤醒
         Coroutine::yield();
         unset($this->request[$message->getRequestId()]);
