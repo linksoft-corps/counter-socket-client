@@ -9,12 +9,12 @@ class ResponseMessage
     /**
      * @var mixed
      */
-    protected $requestId;
+    private $requestId;
 
     /**
      * @var mixed
      */
-    protected $content;
+    private $content;
 
     public function __construct($requestId, $content)
     {
@@ -22,11 +22,19 @@ class ResponseMessage
         $this->content = $content;
     }
 
+    /**
+     * 获取本次响应对应的请求id
+     * @return mixed
+     */
     public function getRequestId()
     {
         return $this->requestId;
     }
 
+    /**
+     * 获取响应内容
+     * @return mixed
+     */
     public function getContent()
     {
         return $this->content;

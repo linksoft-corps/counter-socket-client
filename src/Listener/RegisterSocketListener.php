@@ -30,8 +30,8 @@ class RegisterSocketListener implements ListenerInterface
 
     public function process(object $event)
     {
-        $this->logger->debug('LinkSoft Server Starting...');
+        $this->logger->info('LinkSoft socket client starting...');
         Client::initInstance();
-        $this->logger->debug('LinkSoft Server Start Success.');
+        $this->logger->info('LinkSoft socket client starting success.');
     }
 }
