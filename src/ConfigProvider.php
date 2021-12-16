@@ -9,11 +9,11 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-namespace LinksoftCorps\CounterSocketClient;
+namespace LinkSoft\SocketClient;
 
-use LinksoftCorps\CounterSocketClient\Callback\Callback;
-use LinksoftCorps\CounterSocketClient\Callback\CallbackInterface;
-use LinksoftCorps\CounterSocketClient\Listener\RegisterSocketListener;
+use LinkSoft\SocketClient\Callback\Callback;
+use LinkSoft\SocketClient\Callback\CallbackInterface;
+use LinkSoft\SocketClient\Listener\RegisterSocketListener;
 
 class ConfigProvider
 {

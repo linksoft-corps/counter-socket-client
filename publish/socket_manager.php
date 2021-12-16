@@ -17,9 +17,5 @@ return [
     'server' => [
         'host' => env('LINK_SOCKET_SERVER_HOST', 'localhost'),
         'port' => env('LINK_SOCKET_SERVER_PORT', 8080)
-    ],
-    'push_callback' => [
-        'class'     => env('LINK_SOCKET_CALLBACK_CLASS', ''),
-        'method'    => env('LINK_SOCKET_CALLBACK_FUNC', '')
     ]
 ];

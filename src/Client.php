@@ -1,18 +1,18 @@
 <?php
 declare(strict_types=1);
 
-namespace LinksoftCorps\CounterSocketClient;
+namespace LinkSoft\SocketClient;
 
 use Hyperf\Contract\ConfigInterface;
 use Hyperf\Logger\LoggerFactory;
 use Hyperf\Utils\ApplicationContext;
-use LinksoftCorps\CounterSocketClient\Callback\CallbackInterface;
-use LinksoftCorps\CounterSocketClient\Constants\Code;
-use LinksoftCorps\CounterSocketClient\Event\LinkSocketInitSuccessEvent;
-use LinksoftCorps\CounterSocketClient\Exception\ConnectException;
-use LinksoftCorps\CounterSocketClient\Exception\RequestException;
-use LinksoftCorps\CounterSocketClient\Message\RequestMessage;
-use LinksoftCorps\CounterSocketClient\Message\ResponseMessage;
+use LinkSoft\SocketClient\Callback\CallbackInterface;
+use LinkSoft\SocketClient\Constants\Code;
+use LinkSoft\SocketClient\Event\LinkSocketInitSuccessEvent;
+use LinkSoft\SocketClient\Exception\ConnectException;
+use LinkSoft\SocketClient\Exception\RequestException;
+use LinkSoft\SocketClient\Message\RequestMessage;
+use LinkSoft\SocketClient\Message\ResponseMessage;
 use Exception;
 use Hyperf\Contract\PackerInterface;
 use Hyperf\Contract\StdoutLoggerInterface;

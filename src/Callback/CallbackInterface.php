@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace LinksoftCorps\CounterSocketClient\Callback;
+namespace LinkSoft\SocketClient\Callback;
 
-use LinksoftCorps\CounterSocketClient\Message\ResponseMessage;
+use LinkSoft\SocketClient\Message\ResponseMessage;
 
 interface CallbackInterface
 {

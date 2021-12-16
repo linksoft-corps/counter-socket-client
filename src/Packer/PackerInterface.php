@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace LinksoftCorps\CounterSocketClient\Packer;
+namespace LinkSoft\SocketClient\Packer;
 
-use LinksoftCorps\CounterSocketClient\Message\RequestMessage;
-use LinksoftCorps\CounterSocketClient\Message\ResponseMessage;
+use LinkSoft\SocketClient\Message\RequestMessage;
+use LinkSoft\SocketClient\Message\ResponseMessage;
 
 interface PackerInterface
 {

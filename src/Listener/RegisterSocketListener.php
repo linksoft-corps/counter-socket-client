@@ -1,14 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace LinksoftCorps\CounterSocketClient\Listener;
+namespace LinkSoft\SocketClient\Listener;
 
 
 use Hyperf\Event\Contract\ListenerInterface;
 use Hyperf\Logger\LoggerFactory;
 use Hyperf\Server\Event\MainCoroutineServerStart;
-use LinksoftCorps\CounterSocketClient\Client;
-use LinksoftCorps\CounterSocketClient\Event\LinkSocketInitSuccessEvent;
+use LinkSoft\SocketClient\Client;
+use LinkSoft\SocketClient\Event\LinkSocketInitSuccessEvent;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
 class RegisterSocketListener implements ListenerInterface

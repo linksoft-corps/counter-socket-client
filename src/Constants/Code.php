@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace LinksoftCorps\CounterSocketClient\Constants;
+namespace LinkSoft\SocketClient\Constants;
 
 class Code
 {

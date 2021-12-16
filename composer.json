@@ -1,5 +1,5 @@
 {
-    "name": "linksoft-corps/counter-socket-client",
+    "name": "linksoft/socket-client",
     "type": "library",
     "license": "Apache-2.0",
     "keywords": [
@@ -9,12 +9,12 @@
     "description": "Multiplexing a single socket connection, asynchronous transmission into synchronous transmissiony",
     "autoload": {
         "psr-4": {
-            "LinksoftCorps\\CounterSocketClient\\": "src/"
+            "LinkSoft\\SocketClient\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "HyperfTest\\": "tests"
+            "LinkSoftTest\\SocketClient\\": "tests"
         }
     },
     "require": {
@@ -47,7 +47,7 @@
     },
     "extra": {
         "hyperf": {
-            "config": "LinksoftCorps\\CounterSocketClient\\ConfigProvider"
+            "config": "LinkSoft\\SocketClient\\ConfigProvider"
         }
     }
 }

@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace LinksoftCorps\CounterSocketClient\Callback;
+namespace LinkSoft\SocketClient\Callback;
 
 use Hyperf\Logger\LoggerFactory;
-use LinksoftCorps\CounterSocketClient\Message\ResponseMessage;
+use LinkSoft\SocketClient\Message\ResponseMessage;
 use Psr\Log\LoggerInterface;
 
 class Callback implements CallbackInterface
