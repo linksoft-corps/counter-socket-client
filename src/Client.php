@@ -228,6 +228,7 @@ class Client
                     try {
                         $this->client = $this->createClient();
                         $this->connect();
+                        $this->logger->info('connected.');
                     } catch (ConnectException $ce) {
                         $this->logger->error($ce->getMessage(), [
                             'code'  => $ce->getCode(),
