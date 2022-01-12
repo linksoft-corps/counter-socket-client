@@ -164,6 +164,7 @@ class Client
         if (!$this->client->connect($config['host'], (int)$config['port'])) {
             throw new ConnectException('socket connect failed, err: ' . $this->client->errMsg, Code::CONNECT_FAIL);
         }
+        $this->logger->info('connected.');
         // 触发连接事件
         $this->eventDispatcher->dispatch(new LinkSocketInitSuccessEvent());
     }
@@ -228,7 +229,6 @@ class Client
                     try {
                         $this->client = $this->createClient();
                         $this->connect();
-                        $this->logger->info('connected.');
                     } catch (ConnectException $ce) {
                         $this->logger->error($ce->getMessage(), [
                             'code'  => $ce->getCode(),
