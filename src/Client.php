@@ -177,7 +177,9 @@ class Client
         go(function () {
             while (true) {
                 if ($this->client->peek(4)) {
-                    $this->recv();
+                    go(function () {
+                        $this->recv();
+                    });
                 } else {
                     Coroutine::sleep(0.01);
                 }
@@ -268,14 +270,12 @@ class Client
                 }
                 // 已经结束的协程请求数据，和服务端主动推送数据，最终都会在这里被处理
             } else {
-                go(function () use ($message) {
-                    try {
-                        $callback = ApplicationContext::getContainer()->get(CallbackInterface::class);
-                        $callback->handle($message);
-                    } catch (NotFoundExceptionInterface | ContainerExceptionInterface $e) {
-                        $this->logger->error('recv err: ' . $e->getMessage());
-                    }
-                });
+                try {
+                    $callback = ApplicationContext::getContainer()->get(CallbackInterface::class);
+                    $callback->handle($message);
+                } catch (NotFoundExceptionInterface | ContainerExceptionInterface $e) {
+                    $this->logger->error('recv err: ' . $e->getMessage());
+                }
             }
         } catch (Exception $e) {
             $this->logger->error('recv err: ' . $e->getMessage());
