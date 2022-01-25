@@ -177,8 +177,13 @@ class Client
         go(function () {
             while (true) {
                 if ($this->client->peek(4)) {
-                    go(function () {
-                        $this->recv();
+                    $response = $this->client->recvPacket();
+                    // 返回数据不是string，说明超时，交给僵尸协程清理者处理
+                    if (!is_string($response)) {
+                        return;
+                    }
+                    go(function () use ($response) {
+                        $this->recv($response);
                     });
                 } else {
                     Coroutine::sleep(0.01);
@@ -248,13 +253,8 @@ class Client
     /**
      * 此处处理单条数据被接收后的情况
      */
-    private function recv()
+    private function recv($response)
     {
-        $response = $this->client->recvPacket();
-        // 返回数据不是string，说明超时，交给僵尸协程清理者处理
-        if (!is_string($response)) {
-            return;
-        }
         try {
             /* @var $message ResponseMessage */
             $message = $this->packer->unpack($response);
