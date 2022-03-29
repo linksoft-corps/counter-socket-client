@@ -16,11 +16,13 @@ use LinkSoft\SocketClient\Message\ResponseMessage;
 use Exception;
 use Hyperf\Contract\StdoutLoggerInterface;
 use LinkSoft\SocketClient\Packer\PackerInterface;
+use LinkSoft\SocketClient\Util\TimeoutManager;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Swoole\Coroutine;
 use Swoole\Coroutine\Socket;
+use Swoole\Timer;
 
 class Client
 {
@@ -60,6 +62,11 @@ class Client
     private $eventDispatcher;
 
     /**
+     * @var TimeoutManager
+     */
+    private $timeoutManager;
+
+    /**
      * @var array
      */
     private $config;
@@ -75,15 +82,13 @@ class Client
         $this->packer = $container->get(PackerInterface::class);
         $this->logger = $container->get(LoggerFactory::class)->get();
         $this->eventDispatcher = $container->get(EventDispatcherInterface::class);
+        $this->timeoutManager = $container->get(TimeoutManager::class);
         // 创建客户端
         $this->client = $this->createClient();
         $this->logger->info('client create success.');
         // 注册数据接收者
         $this->registerDataProcessor();
         $this->logger->info('registerDataProcessor success.');
-        // 注册僵尸协程清理者
-        $this->registerZombieSweeper();
-        $this->logger->info('registerZombieSweeper success.');
         // 注册心跳检测
         $this->connectionStatusMonitor();
         $this->logger->info('connectionStatusMonitor success.');
@@ -117,12 +122,14 @@ class Client
     /**
      * 发送请求，并接收返回数据
      * @param RequestMessage $message
+     * @param int $timeout
      * @return ResponseMessage
      * @throws RequestException
      */
-    public function send(RequestMessage $message): ResponseMessage
+    public function send(RequestMessage $message, int $timeout = 10): ResponseMessage
     {
-        $this->request[$message->getRequestId()] = $message;
+        $requestId = $message->getRequestId();
+        $this->request[$requestId] = $message;
         // 要发送的数据，判断发送数据长度，以确保发送一定成功
         $data = $this->packer->pack($message);
         $size = strlen($data);
@@ -130,14 +137,19 @@ class Client
         if (!$res || $res != $size) {
             throw new RequestException('data send fail.', Code::REQUEST_FAIL);
         }
+        // 设置超时
+        $timerId = $this->timeoutManager->set($timeout);
         // 等待数据接收者唤醒
         Coroutine::yield();
-        unset($this->request[$message->getRequestId()]);
-        if (!isset($this->response[$message->getRequestId()])) {
-            throw new RequestException('request fail.', Code::REQUEST_FAIL);
+        // 清理超时
+        $this->timeoutManager->clear($timerId);
+        // 处理请求及返回
+        unset($this->request[$requestId]);
+        if (!isset($this->response[$requestId])) {
+            throw new RequestException('request timeout.', Code::REQUEST_TIMEOUT);
         }
-        $response = $this->response[$message->getRequestId()];
-        unset($this->response[$message->getRequestId()]);
+        $response = $this->response[$requestId];
+        unset($this->response[$requestId]);
         return $response;
     }
 
@@ -193,59 +205,25 @@ class Client
     }
 
     /**
-     * 僵尸协程清理者
-     */
-    private function registerZombieSweeper()
-    {
-        go(function () {
-            $timeout = $this->config['client']['coroutines_timeout'];
-            while (true) {
-                $time = time();
-                foreach ($this->request as $key => $request) {
-                    if ($request->getTime() + $timeout < $time) {
-                        $this->logger->info('expire time: ' . $time, [
-                            'cid'        => $request->getCid(),
-                            'request_id' => $request->getRequestId(),
-                            'content'    => $request->getContent(),
-                            'time'       => $request->getTime()
-                        ]);
-                        unset($this->request[$key]);
-                        if (Coroutine::exists($request->getCid())) {
-                            Coroutine::resume($request->getCid());
-                        }
-                        // 新进来的请求时间不会比旧请求更靠前
-                    } else {
-                        break;
-                    }
-                }
-                Coroutine::sleep(1);
-            }
-        });
-    }
-
-    /**
      * 连接状态检测
      */
     private function connectionStatusMonitor()
     {
-        go(function () {
-            while (true) {
-                if ($this->client->checkLiveness()) {
-                    $this->logger->info('connection alive.');
-                } else {
-                    try {
-                        $this->client = $this->createClient();
-                        $this->connect();
-                    } catch (ConnectException $ce) {
-                        $this->logger->error($ce->getMessage(), [
-                            'code'  => $ce->getCode(),
-                            'file'  => $ce->getFile(),
-                            'line'  => $ce->getLine(),
-                            'trace' => $ce->getTraceAsString()
-                        ]);
-                    }
+        Timer::tick(5 * 1000, function () {
+            if ($this->client->checkLiveness()) {
+                $this->logger->info('connection alive.');
+            } else {
+                try {
+                    $this->client = $this->createClient();
+                    $this->connect();
+                } catch (ConnectException $ce) {
+                    $this->logger->error($ce->getMessage(), [
+                        'code'  => $ce->getCode(),
+                        'file'  => $ce->getFile(),
+                        'line'  => $ce->getLine(),
+                        'trace' => $ce->getTraceAsString()
+                    ]);
                 }
-                Coroutine::sleep(5);
             }
         });
     }
@@ -258,15 +236,16 @@ class Client
         try {
             /* @var $message ResponseMessage */
             $message = $this->packer->unpack($response);
-            if (isset($this->request[$message->getRequestId()])) {
-                $request = $this->request[$message->getRequestId()];
+            $requestId = $message->getRequestId();
+            if (isset($this->request[$requestId])) {
+                $request = $this->request[$requestId];
                 // 如果请求协程还在，将其恢复
                 if (Coroutine::exists($request->getCid())) {
-                    $this->response[$message->getRequestId()] = $message;
+                    $this->response[$requestId] = $message;
                     Coroutine::resume($request->getCid());
                 } else {
                     // 清除请求信息
-                    unset($this->request[$message->getRequestId()]);
+                    unset($this->request[$requestId]);
                 }
                 // 已经结束的协程请求数据，和服务端主动推送数据，最终都会在这里被处理
             } else {

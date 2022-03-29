@@ -14,4 +14,9 @@ class Code
      * 数据获取失败
      */
     const REQUEST_FAIL = 1112;
+
+    /**
+     * 数据请求超时
+     */
+    const REQUEST_TIMEOUT = 1113;
 }
