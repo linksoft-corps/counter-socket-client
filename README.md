@@ -63,7 +63,7 @@ $res = Client::getInstance()->send($requestMessage);
 var_dump($res);
 ```
 
-- 自定义 packer 
+- 自定义 packer
 
 ```php
 <?php
@@ -78,7 +78,7 @@ use Hyperf\Utils\Codec\Json;
 use LinkSoft\SocketClient\Message\RequestMessage;
 use LinkSoft\SocketClient\Message\ResponseMessage;
 use LinkSoft\SocketClient\Packer\PackerInterface;
-use phpseclib3\Crypt\Blowfish;
+use LinkSoft\SocketClient\Util\ResponseMessageManager;use phpseclib3\Crypt\Blowfish;
 
 class Packer implements PackerInterface
 {
@@ -96,7 +96,7 @@ class Packer implements PackerInterface
     {
         // $data 为服务端推送过来的内容，你需要将这一部分内容转换成一个 ResponseMessage 对象，
         // 并保证这个对象一定可以有一个与你之前发送的 RequestMessage->requestId 一样的 requestId.
-        return new ResponseMessage($requestId, $message);
+        return ResponseMessageManager::newSuccessResponse($requestId, $message);
     }
 }
 ```
