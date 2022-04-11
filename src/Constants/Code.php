@@ -6,6 +6,10 @@ namespace LinkSoft\SocketClient\Constants;
 class Code
 {
     /**
+     * 请求成功
+     */
+    const REQUEST_SUCCESS = 1;
+    /**
      * 连接服务端失败
      */
     const CONNECT_FAIL = 1111;

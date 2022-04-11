@@ -16,6 +16,7 @@ use LinkSoft\SocketClient\Message\ResponseMessage;
 use Exception;
 use Hyperf\Contract\StdoutLoggerInterface;
 use LinkSoft\SocketClient\Packer\PackerInterface;
+use LinkSoft\SocketClient\Util\ResponseMessageManager;
 use LinkSoft\SocketClient\Util\TimeoutManager;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -42,11 +43,19 @@ class Client
     private $logger;
 
     /**
+     * 预备发送队列
      * @var RequestMessage[]
      */
-    private $request = [];
+    private $prepareRequest = [];
 
     /**
+     * 已发队列
+     * @var RequestMessage[]
+     */
+    private $sendRequest = [];
+
+    /**
+     * 接收队列
      * @var ResponseMessage[]
      */
     private $response = [];
@@ -87,8 +96,11 @@ class Client
         $this->client = $this->createClient();
         $this->logger->info('client create success.');
         // 注册数据接收者
-        $this->registerDataProcessor();
-        $this->logger->info('registerDataProcessor success.');
+        $this->registerDataReceiver();
+        $this->logger->info('registerDataReceiver success.');
+        // 注册数据发送者
+        $this->registerDataSender();
+        $this->logger->info('registerDataSender success.');
         // 注册心跳检测
         $this->connectionStatusMonitor();
         $this->logger->info('connectionStatusMonitor success.');
@@ -128,28 +140,21 @@ class Client
      */
     public function send(RequestMessage $message, int $timeout = 10): ResponseMessage
     {
-        $requestId = $message->getRequestId();
-        $this->request[$requestId] = $message;
-        // 要发送的数据，判断发送数据长度，以确保发送一定成功
-        $data = $this->packer->pack($message);
-        $size = strlen($data);
-        $res = $this->client->send($data);
-        if (!$res || $res != $size) {
-            throw new RequestException('data send fail.', Code::REQUEST_FAIL);
-        }
-        // 设置超时
+        // 设置超时定时器
         $timerId = $this->timeoutManager->set($timeout);
+        // 预备发送
+        $requestId = $message->getRequestId();
+        $this->prepareRequest[$requestId] = $message;
         // 等待数据接收者唤醒
         Coroutine::yield();
-        // 清理超时
+        // 清理超时定时器
         $this->timeoutManager->clear($timerId);
-        // 处理请求及返回
-        unset($this->request[$requestId]);
-        if (!isset($this->response[$requestId])) {
-            throw new RequestException('request timeout.', Code::REQUEST_TIMEOUT);
+        // 处理返回
+        $response = $this->response[$requestId] ?? ResponseMessageManager::newErrResponse($requestId, Code::REQUEST_FAIL, 'request fail.');
+        $this->clearRequest($requestId);
+        if ($response->getErrCode() != Code::REQUEST_SUCCESS) {
+            throw new RequestException($response->getErrMsg(), $response->getErrCode());
         }
-        $response = $this->response[$requestId];
-        unset($this->response[$requestId]);
         return $response;
     }
 
@@ -182,15 +187,44 @@ class Client
     }
 
     /**
+     * 开启协程，循环向服务端发送数据
+     */
+    public function registerDataSender()
+    {
+        go(function () {
+            while (true) {
+                if ($message = array_shift($this->prepareRequest)) {
+                    // 要发送的数据，判断发送数据长度，以确保发送一定成功
+                    $data = $this->packer->pack($message);
+                    $size = strlen($data);
+                    $res = $this->client->send($data);
+                    if (!$res || $res != $size) {
+                        $cid = $message->getCid();
+                        if (Coroutine::exists($cid)) {
+                            Coroutine::resume($cid);
+                        }
+                    } else {
+                        // 设置已发队列
+                        $this->sendRequest[$message->getRequestId()] = $message;
+                    }
+                } else {
+                    // 休眠降低cpu空转消耗
+                    Coroutine::sleep(0.01);
+                }
+            }
+        });
+    }
+
+    /**
      * 开启协程，循环接收服务端返回数据
      */
-    private function registerDataProcessor()
+    private function registerDataReceiver()
     {
         go(function () {
             while (true) {
                 if ($this->client->peek(4)) {
                     $response = $this->client->recvPacket();
-                    // 返回数据不是string，说明超时，交给僵尸协程清理者处理
+                    // 返回数据不是string不处理，发送者会自动过期唤醒
                     if (!is_string($response)) {
                         return;
                     }
@@ -237,18 +271,20 @@ class Client
             /* @var $message ResponseMessage */
             $message = $this->packer->unpack($response);
             $requestId = $message->getRequestId();
-            if (isset($this->request[$requestId])) {
-                $request = $this->request[$requestId];
+            // 如果是我方请求
+            if (isset($this->sendRequest[$requestId])) {
+                $request = $this->sendRequest[$requestId];
                 // 如果请求协程还在，将其恢复
-                if (Coroutine::exists($request->getCid())) {
+                $cid = $request->getCid();
+                if (Coroutine::exists($cid)) {
                     $this->response[$requestId] = $message;
-                    Coroutine::resume($request->getCid());
+                    Coroutine::resume($cid);
                 } else {
                     // 清除请求信息
-                    unset($this->request[$requestId]);
+                    $this->clearRequest($requestId);
                 }
-                // 已经结束的协程请求数据，和服务端主动推送数据，最终都会在这里被处理
             } else {
+                // 已经结束的协程请求数据，和服务端主动推送数据，最终都会在这里被处理
                 try {
                     $callback = ApplicationContext::getContainer()->get(CallbackInterface::class);
                     $callback->handle($message);
@@ -259,5 +295,16 @@ class Client
         } catch (Exception $e) {
             $this->logger->error('recv err: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * 清理指定请求
+     * @param $requestId
+     */
+    private function clearRequest($requestId)
+    {
+        unset($this->prepareRequest[$requestId]);
+        unset($this->sendRequest[$requestId]);
+        unset($this->response[$requestId]);
     }
 }

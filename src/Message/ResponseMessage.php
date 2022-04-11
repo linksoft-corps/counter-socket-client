@@ -5,7 +5,6 @@ namespace LinkSoft\SocketClient\Message;
 
 class ResponseMessage
 {
-
     /**
      * @var mixed
      */
@@ -16,10 +15,19 @@ class ResponseMessage
      */
     private $content;
 
-    public function __construct($requestId, $content)
+    /**
+     * @var int
+     */
+    private $errCode;
+
+    /**
+     * @var string
+     */
+    private $errMsg;
+
+    public function __construct($requestId)
     {
         $this->requestId = $requestId;
-        $this->content = $content;
     }
 
     /**
@@ -38,5 +46,50 @@ class ResponseMessage
     public function getContent()
     {
         return $this->content;
+    }
+
+    /**
+     * 获取返回码
+     * @return int
+     */
+    public function getErrCode(): int
+    {
+        return $this->errCode;
+    }
+
+    /**
+     * 获取返回错误信息
+     * @return string
+     */
+    public function getErrMsg(): string
+    {
+        return $this->errMsg;
+    }
+
+    /**
+     * 设置返回内容
+     * @param $content
+     */
+    public function setContent($content)
+    {
+        $this->content = $content;
+    }
+
+    /**
+     * 设置返回错误码
+     * @param int $errCode
+     */
+    public function setErrCode(int $errCode)
+    {
+        $this->errCode = $errCode;
+    }
+
+    /**
+     * 设置错误信息
+     * @param string $errMsg
+     */
+    public function setErrMsg(string $errMsg)
+    {
+        $this->errMsg = $errMsg;
     }
 }
