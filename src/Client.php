@@ -189,7 +189,7 @@ class Client
     /**
      * 开启协程，循环向服务端发送数据
      */
-    public function registerDataSender()
+    private function registerDataSender()
     {
         go(function () {
             while (true) {
