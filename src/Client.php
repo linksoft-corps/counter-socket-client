@@ -209,7 +209,8 @@ class Client
                     }
                 } else {
                     // 休眠降低cpu空转消耗
-                    Coroutine::sleep($this->config['client']['poll_sleep_time'] ?? 0.2);
+                    $pollSleepTime = floatval($this->config['client']['poll_sleep_time'] ?? 0.2);
+                    Coroutine::sleep($pollSleepTime);
                 }
             }
         });
@@ -231,7 +232,9 @@ class Client
                         $this->recv($response);
                     });
                 } else {
-                    Coroutine::sleep($this->config['client']['poll_sleep_time'] ?? 0.2);
+                    // 休眠降低cpu空转消耗
+                    $pollSleepTime = floatval($this->config['client']['poll_sleep_time'] ?? 0.2);
+                    Coroutine::sleep($pollSleepTime);
                 }
             }
         });
