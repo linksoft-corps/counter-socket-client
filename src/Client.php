@@ -209,7 +209,7 @@ class Client
                     }
                 } else {
                     // 休眠降低cpu空转消耗
-                    Coroutine::sleep(0.01);
+                    Coroutine::sleep($this->config['client']['poll_sleep_time'] ?? 0.2);
                 }
             }
         });
@@ -222,8 +222,7 @@ class Client
     {
         go(function () {
             while (true) {
-                if ($this->client->peek(4)) {
-                    $response = $this->client->recvPacket();
+                if ($response = $this->client->recvPacket()) {
                     // 返回数据不是string不处理，发送者会自动过期唤醒
                     if (!is_string($response)) {
                         return;
@@ -232,7 +231,7 @@ class Client
                         $this->recv($response);
                     });
                 } else {
-                    Coroutine::sleep(0.01);
+                    Coroutine::sleep($this->config['client']['poll_sleep_time'] ?? 0.2);
                 }
             }
         });
