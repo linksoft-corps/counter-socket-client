@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace LinkSoft\SocketClient\Message;
 
+use LinkSoft\SocketClient\Constants\Code;
+
 class ResponseMessage
 {
     /**
@@ -13,17 +15,17 @@ class ResponseMessage
     /**
      * @var mixed
      */
-    private $content;
+    private $content = '';
 
     /**
      * @var int
      */
-    private $errCode;
+    private $errCode = Code::REQUEST_SUCCESS;
 
     /**
      * @var string
      */
-    private $errMsg;
+    private $errMsg = '';
 
     /**
      * @var bool
