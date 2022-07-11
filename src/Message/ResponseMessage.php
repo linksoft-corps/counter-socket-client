@@ -25,6 +25,11 @@ class ResponseMessage
      */
     private $errMsg;
 
+    /**
+     * @var bool
+     */
+    private $isEnd = false;
+
     public function __construct($requestId)
     {
         $this->requestId = $requestId;
@@ -67,6 +72,15 @@ class ResponseMessage
     }
 
     /**
+     * 是否接收完成
+     * @return bool
+     */
+    public function getIsEnd(): bool
+    {
+        return $this->isEnd;
+    }
+
+    /**
      * 设置返回内容
      * @param $content
      */
@@ -91,5 +105,13 @@ class ResponseMessage
     public function setErrMsg(string $errMsg)
     {
         $this->errMsg = $errMsg;
+    }
+
+    /**
+     * 设置已经接收完成
+     */
+    public function setIsEnd()
+    {
+        $this->isEnd = true;
     }
 }

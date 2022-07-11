@@ -16,6 +16,7 @@ use LinkSoft\SocketClient\Exception\RequestException;
 use LinkSoft\SocketClient\Message\RequestMessage;
 use LinkSoft\SocketClient\Message\ResponseMessage;
 use LinkSoft\SocketClient\Packer\PackerInterface;
+use LinkSoft\SocketClient\Processor\ResponseProcessorInterface;
 use LinkSoft\SocketClient\Util\ResponseMessageManager;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -65,6 +66,11 @@ class Client
     private $packer;
 
     /**
+     * @var ResponseProcessorInterface
+     */
+    private $responseProcessor;
+
+    /**
      * @var EventDispatcherInterface
      */
     private $eventDispatcher;
@@ -83,6 +89,7 @@ class Client
         $container = ApplicationContext::getContainer();
         $this->config = $container->get(ConfigInterface::class)->get('link_socket_client');
         $this->packer = $container->get(PackerInterface::class);
+        $this->responseProcessor = $container->get(ResponseProcessorInterface::class);
         $this->logger = $container->get(LoggerFactory::class)->get();
         $this->eventDispatcher = $container->get(EventDispatcherInterface::class);
         // 创建客户端
@@ -256,19 +263,22 @@ class Client
     private function recv($response)
     {
         try {
-            /* @var $message ResponseMessage */
-            $message = $this->packer->unpack($response);
-            $requestId = $message->getRequestId();
+            /* @var $newResponse ResponseMessage */
+            $newResponse = $this->packer->unpack($response);
+            $requestId = $newResponse->getRequestId();
             // 如果是我方请求
             if (isset($this->sendRequest[$requestId])) {
-                $request = $this->sendRequest[$requestId];
-                $this->response[$requestId] = $message;
-                $request->done();
+                // 20220711 新增：支持服务端连续对某个请求推送多个数据包，包处理交给实现端完成
+                $stockResponse = $this->response[$requestId] ?? ResponseMessageManager::newSuccessResponse($requestId, '', false);
+                $this->response[$requestId] = $this->responseProcessor->handle($stockResponse, $newResponse);
+                if ($this->response[$requestId]->getIsEnd()) {
+                    $this->sendRequest[$requestId]->done();
+                }
             } else {
                 // 已经结束的协程请求数据，和服务端主动推送数据，最终都会在这里被处理
                 try {
                     $callback = ApplicationContext::getContainer()->get(CallbackInterface::class);
-                    $callback->handle($message);
+                    $callback->handle($newResponse);
                 } catch (NotFoundExceptionInterface | ContainerExceptionInterface $e) {
                     $this->logger->error('recv err: ' . $e->getMessage());
                 }
