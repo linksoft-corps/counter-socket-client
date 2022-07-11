@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace LinkSoft\SocketClient\Message;
 
-use Swoole\Coroutine;
+use Hyperf\Utils\Coordinator\Coordinator;
 
 class RequestMessage
 {
     /**
-     * @var int
+     * @var Coordinator
      */
-    private $cid;
+    private $coordinator;
 
     /**
      * @var mixed
@@ -29,19 +29,30 @@ class RequestMessage
 
     public function __construct($requestId, $content)
     {
-        $this->cid = Coroutine::getCid();
+        $this->coordinator = new Coordinator();
         $this->time = time();
         $this->requestId = $requestId;
         $this->content = $content;
     }
 
     /**
-     * 获取本请求所属的协程 id
-     * @return int
+     * 等待返回
+     * @param int $timeout
+     * @return bool
      */
-    public function getCid(): int
+    public function wait(int $timeout = 10): bool
     {
-        return $this->cid;
+        $res = $this->coordinator->yield($timeout);
+        $this->done();
+        return $res;
+    }
+
+    /**
+     * 设置请求已完成
+     */
+    public function done()
+    {
+        $this->coordinator->resume();
     }
 
     /**

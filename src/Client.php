@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace LinkSoft\SocketClient;
 
+use Exception;
 use Hyperf\Contract\ConfigInterface;
+use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\Logger\LoggerFactory;
 use Hyperf\Utils\ApplicationContext;
 use LinkSoft\SocketClient\Callback\CallbackInterface;
@@ -13,11 +15,8 @@ use LinkSoft\SocketClient\Exception\ConnectException;
 use LinkSoft\SocketClient\Exception\RequestException;
 use LinkSoft\SocketClient\Message\RequestMessage;
 use LinkSoft\SocketClient\Message\ResponseMessage;
-use Exception;
-use Hyperf\Contract\StdoutLoggerInterface;
 use LinkSoft\SocketClient\Packer\PackerInterface;
 use LinkSoft\SocketClient\Util\ResponseMessageManager;
-use LinkSoft\SocketClient\Util\TimeoutManager;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -71,11 +70,6 @@ class Client
     private $eventDispatcher;
 
     /**
-     * @var TimeoutManager
-     */
-    private $timeoutManager;
-
-    /**
      * @var array
      */
     private $config;
@@ -91,7 +85,6 @@ class Client
         $this->packer = $container->get(PackerInterface::class);
         $this->logger = $container->get(LoggerFactory::class)->get();
         $this->eventDispatcher = $container->get(EventDispatcherInterface::class);
-        $this->timeoutManager = $container->get(TimeoutManager::class);
         // 创建客户端
         $this->client = $this->createClient();
         $this->logger->info('client create success.');
@@ -140,15 +133,11 @@ class Client
      */
     public function send(RequestMessage $message, int $timeout = 10): ResponseMessage
     {
-        // 设置超时定时器
-        $timerId = $this->timeoutManager->set($timeout);
         // 预备发送
         $requestId = $message->getRequestId();
         $this->prepareRequest[$requestId] = $message;
-        // 等待数据接收者唤醒
-        Coroutine::yield();
-        // 清理超时定时器
-        $this->timeoutManager->clear($timerId);
+        // 等待唤醒
+        $message->wait($timeout);
         // 处理返回
         $response = $this->response[$requestId] ?? ResponseMessageManager::newErrResponse($requestId, Code::REQUEST_FAIL, 'request fail.');
         $this->clearRequest($requestId);
@@ -199,10 +188,7 @@ class Client
                     $size = strlen($data);
                     $res = $this->client->send($data);
                     if (!$res || $res != $size) {
-                        $cid = $message->getCid();
-                        if (Coroutine::exists($cid)) {
-                            Coroutine::resume($cid);
-                        }
+                        $message->done();
                     } else {
                         // 设置已发队列
                         $this->sendRequest[$message->getRequestId()] = $message;
@@ -224,7 +210,7 @@ class Client
         go(function () {
             while (true) {
                 if ($response = $this->client->recvPacket()) {
-                    // 返回数据不是string不处理，发送者会自动过期唤醒
+                    // 返回数据不是 string 不处理，发送者会自动过期唤醒
                     if (!is_string($response)) {
                         return;
                     }
@@ -276,15 +262,8 @@ class Client
             // 如果是我方请求
             if (isset($this->sendRequest[$requestId])) {
                 $request = $this->sendRequest[$requestId];
-                // 如果请求协程还在，将其恢复
-                $cid = $request->getCid();
-                if (Coroutine::exists($cid)) {
-                    $this->response[$requestId] = $message;
-                    Coroutine::resume($cid);
-                } else {
-                    // 清除请求信息
-                    $this->clearRequest($requestId);
-                }
+                $this->response[$requestId] = $message;
+                $request->done();
             } else {
                 // 已经结束的协程请求数据，和服务端主动推送数据，最终都会在这里被处理
                 try {
