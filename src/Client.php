@@ -81,6 +81,11 @@ class Client
     private $config;
 
     /**
+     * @var bool
+     */
+    private $connectStatus;
+
+    /**
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
@@ -177,6 +182,7 @@ class Client
         if (!$this->client->connect($config['host'], (int)$config['port'])) {
             throw new ConnectException('socket connect failed, err: ' . $this->client->errMsg, Code::CONNECT_FAIL);
         }
+        $this->connectStatus = true;
         $this->logger->info('connected.');
         // 触发连接事件
         $this->eventDispatcher->dispatch(new LinkSocketInitSuccessEvent());
@@ -239,10 +245,11 @@ class Client
     private function connectionStatusMonitor()
     {
         Timer::tick(5 * 1000, function () {
-            if ($this->client->checkLiveness()) {
+            if (!empty($this->connectStatus) && $this->client->checkLiveness()) {
                 $this->logger->info('connection alive.');
             } else {
                 try {
+                    $this->connectStatus = false;
                     $this->client = $this->createClient();
                     $this->connect();
                 } catch (ConnectException $ce) {
