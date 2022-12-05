@@ -8,31 +8,42 @@ use Hyperf\Utils\Coordinator\Coordinator;
 class RequestMessage
 {
     /**
+     * 调度器
      * @var Coordinator
      */
     private $coordinator;
 
     /**
+     * 请求唯一标识
      * @var mixed
      */
     private $requestId;
 
     /**
+     * 请求内容
      * @var mixed
      */
     private $content;
 
     /**
+     * 请求发起时间
      * @var int
      */
     private $time;
 
-    public function __construct($requestId, $content)
+    /**
+     * 是否等待返回结果
+     * @var bool
+     */
+    private $isWait;
+
+    public function __construct($requestId, $content, bool $isWait = true)
     {
         $this->coordinator = new Coordinator();
         $this->time = time();
         $this->requestId = $requestId;
         $this->content = $content;
+        $this->isWait = $isWait;
     }
 
     /**
@@ -80,5 +91,14 @@ class RequestMessage
     public function getTime(): int
     {
         return $this->time;
+    }
+
+    /**
+     * 获取是否等待返回结果
+     * @return bool
+     */
+    public function getIsWait(): bool
+    {
+        return $this->isWait;
     }
 }

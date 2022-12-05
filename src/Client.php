@@ -148,6 +148,10 @@ class Client
         // 预备发送
         $requestId = $message->getRequestId();
         $this->prepareRequest[$requestId] = $message;
+        // 这种情况下，我方不等待返回结果，直接默认响应
+        if (!$message->getIsWait()) {
+            return ResponseMessageManager::newSuccessResponse($requestId, '', true);
+        }
         // 等待唤醒
         $message->wait($timeout);
         // 处理返回
@@ -204,7 +208,9 @@ class Client
                         $message->done();
                     } else {
                         // 设置已发队列
-                        $this->sendRequest[$message->getRequestId()] = $message;
+                        if ($message->getIsWait()) {
+                            $this->sendRequest[$message->getRequestId()] = $message;
+                        }
                     }
                 } else {
                     // 休眠降低cpu空转消耗
