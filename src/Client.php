@@ -233,9 +233,7 @@ class Client
                     if (!is_string($response)) {
                         return;
                     }
-                    go(function () use ($response) {
-                        $this->recv($response);
-                    });
+                    $this->recv($response);
                 } else {
                     // 休眠降低cpu空转消耗
                     $pollSleepTime = floatval($this->config['client']['poll_sleep_time'] ?? 0.2);
