@@ -199,7 +199,7 @@ class Client
     {
         go(function () {
             while (true) {
-                if ($message = array_shift($this->prepareRequest)) {
+                if (!empty($this->connectStatus) && $message = array_shift($this->prepareRequest)) {
                     // 要发送的数据，判断发送数据长度，以确保发送一定成功
                     $data = $this->packer->pack($message);
                     $size = strlen($data);
@@ -228,7 +228,7 @@ class Client
     {
         go(function () {
             while (true) {
-                if ($response = $this->client->recvPacket()) {
+                if (!empty($this->connectStatus) && $response = $this->client->recvPacket()) {
                     // 返回数据不是 string 不处理，发送者会自动过期唤醒
                     if (!is_string($response)) {
                         return;
