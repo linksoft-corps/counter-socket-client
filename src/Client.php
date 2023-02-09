@@ -145,18 +145,26 @@ class Client
      */
     public function send(RequestMessage $message, int $timeout = 10): ResponseMessage
     {
-        // 预备发送
+        // 获取requestId
         $requestId = $message->getRequestId();
-        $this->prepareRequest[$requestId] = $message;
-        // 这种情况下，我方不等待返回结果，直接默认响应
-        if (!$message->getIsWait()) {
-            return ResponseMessageManager::newSuccessResponse($requestId, '', true);
+
+        // 无连接，直接返回
+        if (!$this->isConnect()) {
+            $response = ResponseMessageManager::newErrResponse($requestId, Code::REQUEST_FAIL, 'request fail.');
+        } else {
+            // 预备发送请求
+            $this->prepareRequest[$requestId] = $message;
+            if (!$message->getIsWait()) {
+                $response = ResponseMessageManager::newSuccessResponse($requestId, '', true);
+            } else {
+                // 等待唤醒
+                $message->wait($timeout);
+                // 处理返回
+                $response = $this->response[$requestId] ?? ResponseMessageManager::newErrResponse($requestId, Code::REQUEST_FAIL, 'request fail.');
+                $this->clearRequest($requestId);
+            }
         }
-        // 等待唤醒
-        $message->wait($timeout);
-        // 处理返回
-        $response = $this->response[$requestId] ?? ResponseMessageManager::newErrResponse($requestId, Code::REQUEST_FAIL, 'request fail.');
-        $this->clearRequest($requestId);
+
         if ($response->getErrCode() != Code::REQUEST_SUCCESS) {
             throw new RequestException($response->getErrMsg(), $response->getErrCode());
         }
@@ -199,7 +207,7 @@ class Client
     {
         go(function () {
             while (true) {
-                if (!empty($this->connectStatus) && $message = array_shift($this->prepareRequest)) {
+                if ($this->isConnect() && $message = array_shift($this->prepareRequest)) {
                     // 要发送的数据，判断发送数据长度，以确保发送一定成功
                     $data = $this->packer->pack($message);
                     $size = strlen($data);
@@ -228,7 +236,7 @@ class Client
     {
         go(function () {
             while (true) {
-                if (!empty($this->connectStatus) && $response = $this->client->recvPacket()) {
+                if ($this->isConnect() && $response = $this->client->recvPacket()) {
                     // 返回数据不是 string 不处理，发送者会自动过期唤醒
                     if (!is_string($response)) {
                         return;
@@ -249,7 +257,7 @@ class Client
     private function connectionStatusMonitor()
     {
         Timer::tick(5 * 1000, function () {
-            if (!empty($this->connectStatus) && $this->client->checkLiveness()) {
+            if ($this->isConnect() && $this->client->checkLiveness()) {
                 $this->logger->info('connection alive.');
             } else {
                 try {
@@ -308,5 +316,14 @@ class Client
         unset($this->prepareRequest[$requestId]);
         unset($this->sendRequest[$requestId]);
         unset($this->response[$requestId]);
+    }
+
+    /**
+     * 是否已建立连接
+     * @return bool
+     */
+    private function isConnect(): bool
+    {
+        return !empty($this->connectStatus);
     }
 }
