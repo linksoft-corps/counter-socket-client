@@ -97,18 +97,15 @@ class Client
         $this->responseProcessor = $container->get(ResponseProcessorInterface::class);
         $this->logger = $container->get(LoggerFactory::class)->get();
         $this->eventDispatcher = $container->get(EventDispatcherInterface::class);
-        // 创建客户端
-        $this->client = $this->createClient();
-        $this->logger->info('client create success.');
-        // 注册数据接收者
-        $this->registerDataReceiver();
-        $this->logger->info('registerDataReceiver success.');
-        // 注册数据发送者
-        $this->registerDataSender();
-        $this->logger->info('registerDataSender success.');
         // 注册心跳检测
         $this->connectionStatusMonitor();
-        $this->logger->info('connectionStatusMonitor success.');
+        $this->logger->info('Connection status monitor success.');
+        // 注册数据接收者
+        $this->registerDataReceiver();
+        $this->logger->info('Register data receiver success.');
+        // 注册数据发送者
+        $this->registerDataSender();
+        $this->logger->info('Register data sender success.');
     }
 
     private function __clone()
@@ -195,7 +192,7 @@ class Client
             throw new ConnectException('socket connect failed, err: ' . $this->client->errMsg, Code::CONNECT_FAIL);
         }
         $this->connectStatus = true;
-        $this->logger->info('connected.');
+        $this->logger->info('Connected.');
         // 触发连接事件
         $this->eventDispatcher->dispatch(new LinkSocketInitSuccessEvent());
     }
@@ -258,10 +255,13 @@ class Client
     {
         Timer::tick(5 * 1000, function () {
             if ($this->isConnect() && $this->client->checkLiveness()) {
-                $this->logger->info('connection alive.');
+                $this->logger->info('Connection alive.');
             } else {
                 try {
                     $this->connectStatus = false;
+                    if (null !== $this->client) {
+                        $this->client->close();
+                    }
                     $this->client = $this->createClient();
                     $this->connect();
                 } catch (ConnectException $ce) {
@@ -299,11 +299,11 @@ class Client
                     $callback = ApplicationContext::getContainer()->get(CallbackInterface::class);
                     $callback->handle($newResponse);
                 } catch (NotFoundExceptionInterface | ContainerExceptionInterface $e) {
-                    $this->logger->error('recv err: ' . $e->getMessage());
+                    $this->logger->error('Recv err: ' . $e->getMessage());
                 }
             }
         } catch (Exception $e) {
-            $this->logger->error('recv err: ' . $e->getMessage());
+            $this->logger->error('Recv err: ' . $e->getMessage());
         }
     }
 
