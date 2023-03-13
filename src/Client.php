@@ -298,7 +298,7 @@ class Client
                 try {
                     $callback = ApplicationContext::getContainer()->get(CallbackInterface::class);
                     $callback->handle($newResponse);
-                } catch (NotFoundExceptionInterface | ContainerExceptionInterface $e) {
+                } catch (NotFoundExceptionInterface|ContainerExceptionInterface $e) {
                     $this->logger->error('Recv err: ' . $e->getMessage());
                 }
             }
@@ -325,5 +325,40 @@ class Client
     private function isConnect(): bool
     {
         return !empty($this->connectStatus);
+    }
+
+    /**
+     * 获取内存中的数据
+     * @return array
+     */
+    public function getMemoryData(): array
+    {
+        $res = [];
+        foreach ($this->prepareRequest as $requestMessage) {
+            $res['prepare'][] = [
+                'requestId' => $requestMessage->getRequestId(),
+                'content'   => $requestMessage->getContent(),
+                'time'      => $requestMessage->getTime(),
+                'isWait'    => $requestMessage->getIsWait()
+            ];
+        }
+        foreach ($this->sendRequest as $requestMessage) {
+            $res['send'][] = [
+                'requestId' => $requestMessage->getRequestId(),
+                'content'   => $requestMessage->getContent(),
+                'time'      => $requestMessage->getTime(),
+                'isWait'    => $requestMessage->getIsWait()
+            ];
+        }
+        foreach ($this->response as $responseMessage) {
+            $res['response'][] = [
+                'requestId' => $responseMessage->getRequestId(),
+                'content'   => $responseMessage->getContent(),
+                'errCode'   => $responseMessage->getErrCode(),
+                'errMsg'    => $responseMessage->getErrMsg(),
+                'isEnd'     => $responseMessage->getIsEnd()
+            ];
+        }
+        return $res;
     }
 }
