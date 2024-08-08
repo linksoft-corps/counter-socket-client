@@ -140,8 +140,12 @@ class Client
      * @return ResponseMessage
      * @throws RequestException
      */
-    public function send(RequestMessage $message, int $timeout = 10): ResponseMessage
+    public function send(RequestMessage $message, ?int $timeout = null): ResponseMessage
     {
+        if ($timeout == null) {
+            $timeout = $this->config['client']['coroutines_timeout'] ?? 60;
+        }
+
         // 获取requestId
         $requestId = $message->getRequestId();
 
